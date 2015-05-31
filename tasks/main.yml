@@ -1,0 +1,56 @@
+---
+#
+# This role should be run with sudo=yes sudo_user={{ endeca_user }}.
+#
+
+#
+# CAS
+#
+
+- set_fact:
+    cas_archive: "V46393-01.zip"
+    cas_install: "OCcas11.1.0-Linux64.sh"
+    tmpdir: /tmp
+
+- name: expand CAS archive
+  unarchive: 
+  args:
+    src: "{{ cas_archive }}"
+    dest: "{{ tmpdir }}"
+    creates: "{{ tmpdir }}/{{ cas_install }}"
+
+- name: ensure CAS install file is executable
+  file:
+  args:
+    path: "{{ tmpdir }}/{{ cas_install }}"
+    mode: 0744
+
+- name: create silent install file for cas 
+  template:
+  args:
+    src: "cas_silent.j2"
+    dest: "{{ tmpdir }}/cas_silent.txt"
+
+- name: install cas
+  command: "{{ tmpdir }}/{{ cas_install }} --silent --target {{ endeca_root }} < '{{ tmpdir }}/cas_silent.txt' 2>&1 > /tmp/cas_install.log creates={{ endeca_root }}/endeca/CAS"
+  environment:
+    ENDECA_TOOLS_ROOT: "{{ endeca_root }}/endeca/ToolsAndFrameworks/11.1.0"
+    ENDECA_TOOLS_CONF: "{{ endeca_root }}/endeca/ToolsAndFrameworks/11.1.0/server/workspace"
+
+- name: create cas init script
+  template:
+  args:
+    src: "cas_init.j2"
+    dest: "/etc/init.d/{{ endeca_cas_service }}"
+    mode: 0755
+  sudo: yes
+  sudo_user: root
+
+- name: start service
+  service: 
+  args: 
+    name: "{{ endeca_cas_service }}" 
+    enabled: yes
+    state: started
+  sudo: yes
+  sudo_user: root
