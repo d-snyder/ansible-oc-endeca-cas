@@ -1,6 +1,6 @@
 ---
 #
-# This role should be run with sudo=yes sudo_user={{ endeca_user }}.
+# This role should be run with sudo=yes sudo_user={{ install_user }}.
 #
 
 #
@@ -8,49 +8,49 @@
 #
 
 - set_fact:
-    cas_archive: "V46393-01.zip"
-    cas_install: "OCcas11.1.0-Linux64.sh"
+    install_archive: "V46393-01.zip"
+    install_executable: "OCcas11.1.0-Linux64.sh"
     tmpdir: /tmp
+
+- name: temporary directory for install
+  register: mktemp
+  command: mktemp -d
+
+- name: download installation archive
+  get_url:
+  args:
+    url: "{{ install_archive_url }}"
+    dest: "{{ playbook_dir }}/{{ install_archive }}"
+  when: install_archive_url is defined
 
 - name: expand CAS archive
   unarchive: 
-  args:
-    src: "{{ cas_archive }}"
-    dest: "{{ tmpdir }}"
-    creates: "{{ tmpdir }}/{{ cas_install }}"
+    src="{{ install_archive }}"
+    dest="{{ mktemp.stdout }}"
+    creates="{{ mktemp.stdout }}/{{ install_executable }}"
 
 - name: ensure CAS install file is executable
   file:
   args:
-    path: "{{ tmpdir }}/{{ cas_install }}"
+    path: "{{ mktemp.stdout}}/{{ install_executable }}"
     mode: 0744
 
 - name: create silent install file for cas 
   template:
   args:
     src: "cas_silent.j2"
-    dest: "{{ tmpdir }}/cas_silent.txt"
+    dest: "{{ mktemp.stdout }}/cas_silent.txt"
 
 - name: install cas
-  command: "{{ tmpdir }}/{{ cas_install }} --silent --target {{ endeca_root }} < '{{ tmpdir }}/cas_silent.txt' 2>&1 > /tmp/cas_install.log creates={{ endeca_root }}/endeca/CAS"
+  command: "{{ mktemp.stdout }}/{{ install_executable }} --silent --target {{ install_root }} < '{{ mktemp.stdout }}/cas_silent.txt' 2>&1 > /tmp/cas_install.log creates={{ install_root }}/endeca/CAS"
   environment:
-    ENDECA_TOOLS_ROOT: "{{ endeca_root }}/endeca/ToolsAndFrameworks/11.1.0"
-    ENDECA_TOOLS_CONF: "{{ endeca_root }}/endeca/ToolsAndFrameworks/11.1.0/server/workspace"
+    ENDECA_TOOLS_ROOT: "{{ install_root }}/endeca/ToolsAndFrameworks/11.1.0"
+    ENDECA_TOOLS_CONF: "{{ install_root }}/endeca/ToolsAndFrameworks/11.1.0/server/workspace"
 
-- name: create cas init script
-  template:
-  args:
-    src: "cas_init.j2"
-    dest: "/etc/init.d/{{ endeca_cas_service }}"
-    mode: 0755
-  sudo: yes
-  sudo_user: root
+- include: init.yml tags=configure_service
 
-- name: start service
-  service: 
-  args: 
-    name: "{{ endeca_cas_service }}" 
-    enabled: yes
-    state: started
-  sudo: yes
-  sudo_user: root
+- name: clean up temporary directory
+  file: 
+    state=absent 
+    path="{{ mktemp.stdout }}"
+

@@ -1,5 +1,3 @@
-endeca_root: /opt/endeca
-endeca_user: oracle
 endeca_pid_dir: /var/run/endeca
 endeca_cas_port: 8500
 endeca_cas_shutdown_port: 8506

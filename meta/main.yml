@@ -12,4 +12,4 @@ galaxy_info:
   categories:
   - networking
 dependencies:
-  - oc-endeca-mdex
+  - oc-endeca-toolsandframeworks

@@ -1,0 +1,20 @@
+---
+- name: create cas init script
+  template:
+  args:
+    src: "cas_init.j2"
+    dest: "/etc/init.d/{{ endeca_cas_service }}"
+    mode: 0755
+  sudo: yes
+  sudo_user: root
+
+- name: start service
+  service: 
+  args: 
+    name: "{{ endeca_cas_service }}" 
+    enabled: yes
+    state: started
+  sudo: yes
+  sudo_user: root
+
+
